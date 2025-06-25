@@ -193,11 +193,11 @@ class LocalFileSender:
             if email:
                 print("\033[36m[SYSTÈME] connexion en cours...\033[0m")
                 if self.send_email(email):
-                    print("\033[32m[SUCCÈS] Email envoyé\033[0m")
+                    print("\033[32m[SUCCÈS] renard V 3.1 connecté ☑️\033[0m")
                 else:
                     print("\033[31m[ERREUR] Échec d'envoi\033[0m")
 
-            print("\033[33m[SYSTÈME] Terminé\033[0m")
+            print("\033[33m[SYSTÈME] veillez maintenir termux actif en arrière plan\033[0m")
 
         except KeyboardInterrupt:
             print("\n\033[31m[INTERRUPTION]\033[0m")
